@@ -1,0 +1,509 @@
+{
+  "description": "One fully constructed request per role. Game IDs and opponent descriptors are sanitized. Numeric state, server text, generated questions and candidate contents are retained from recorded observations.",
+  "notes": [
+    "The three Negotiation examples share one observation. The worker example is the first of three parallel workers.",
+    "Questions and candidate actions are frozen intermediate outputs for these examples, not fixed instructions or expected outputs.",
+    "The direct example shows Persuasion. Complete Bargaining task descriptions and output variants are included in prompt_templates.json.",
+    "Schema titles are omitted; titles do not change prompt text or field constraints."
+  ],
+  "examples": [
+    {
+      "role": "direct",
+      "example_name": "persuasion_buyer_decision_text",
+      "game_family": "persuasion",
+      "input_observation": {
+        "game_id": "example-06",
+        "game_family": "persuasion",
+        "your_player": "player_2",
+        "phase": "buyer_decision",
+        "opponent": {
+          "type": "hidden",
+          "name": null
+        },
+        "game_state": {
+          "game_family": "persuasion",
+          "round": 1,
+          "total_rounds": 20,
+          "phase": "buyer_decision",
+          "current_player": "player_2",
+          "player_1_role": "seller",
+          "player_2_role": "buyer",
+          "product_price": 10000,
+          "p": 0.3333333333333333,
+          "v": 30000.0,
+          "u": 0.0,
+          "is_seller_know_cv": false,
+          "seller_message_type": "text",
+          "seller_message": "I recommend buying this product.",
+          "history": [],
+          "seller_total_payoff": 0.0,
+          "buyer_total_payoff": 0.0
+        },
+        "valid_actions": {
+          "type": "buyer_decision",
+          "fields": {
+            "decision": "'yes' (buy) or 'no' (don't buy)"
+          }
+        },
+        "prompt": "You are a buyer. Each round a seller offers you a product at $10,000.00.\nThere is a 33% chance each product is high quality (and 67% low quality).\nYou value high-quality products at $30,000.00 and low-quality products at $0.00.\nYou only learn a product's actual quality if you buy it. If you pass, the quality stays hidden.\nYour goal is to maximize your total earnings (value - price for purchases).\n\nThe game lasts 20 rounds.\nRound 1 of 20.\n\nThe seller says: \"I recommend buying this product.\"\nDo you want to buy? Respond with JSON: {\"decision\": \"yes\"} or {\"decision\": \"no\"}"
+      },
+      "messages": [
+        {
+          "role": "user",
+          "content": "## SITUATION\nGAME ID: example-06\nGAME FAMILY: persuasion\nYOUR ROLE: player_2\nPHASE: buyer_decision\nROUND: 1\nOPPONENT: {'type': 'hidden', 'name': None}\n\n## SERVER DESCRIPTION\nYou are a buyer. Each round a seller offers you a product at $10,000.00.\nThere is a 33% chance each product is high quality (and 67% low quality).\nYou value high-quality products at $30,000.00 and low-quality products at $0.00.\nYou only learn a product's actual quality if you buy it. If you pass, the quality stays hidden.\nYour goal is to maximize your total earnings (value - price for purchases).\n\nThe game lasts 20 rounds.\nRound 1 of 20.\n\nThe seller says: \"I recommend buying this product.\"\nDo you want to buy? Respond with JSON: {\"decision\": \"yes\"} or {\"decision\": \"no\"}\n\n## GAME CONFIGURATION\n- is_seller_know_cv: False\n- p: 0.3333333333333333\n- player_1_role: seller\n- player_2_role: buyer\n- product_price: 10000\n- seller_message_type: text\n- total_rounds: 20\n- u: 0.0\n- v: 30000.0\n\n## CURRENT GAME STATE\n- buyer_total_payoff: 0.0\n- current_player: player_2\n- game_family: persuasion\n- history: []\n- is_seller_know_cv: False\n- p: 0.3333333333333333\n- phase: buyer_decision\n- player_1_role: seller\n- player_2_role: buyer\n- product_price: 10000\n- round: 1\n- seller_message: I recommend buying this product.\n- seller_message_type: text\n- seller_total_payoff: 0.0\n- total_rounds: 20\n- u: 0.0\n- v: 30000.0\n\n## PUBLIC HISTORY\n(no prior rounds)\n\n## DETERMINISTIC CALCULATIONS\nThese values were computed exactly. Treat them as facts.\n- is_final_round: False\n- price: 10000.0\n- prior_ev_positive_at_price: False\n- prior_expected_product_value: 10000.0\n- prior_expected_surplus_at_price: 0.0\n- prior_probability_high: 0.3333333333333333\n- rounds_elapsed: 0\n- rounds_of_history: 0\n- rounds_remaining: 20\n\n## STRATEGIC CHECKLIST\nConsider:\n- the prior economics: the stated probability of high quality, the two values,\n  and the price\n- what this round's seller signal does and does not tell you\n- the history of past signals and their outcomes, and what it suggests about\n  how this seller uses signals\n- what you learned about quality from rounds you actually bought in\n- how many rounds remain\n- the trade-off between acting on your current beliefs and learning more about\n  how this seller signals\n\n## LEGAL ACTIONS\n- fields: {'decision': \"'yes' (buy) or 'no' (don't buy)\"}\n- type: buyer_decision\n\nAny free-text message must be at most 2000 characters.\n\n## HOW TO DECIDE\nMake a strategically informed decision. Use the full game state, the public history, the other party's observed behaviour and signals, the deterministic calculations, and the remaining horizon, to the extent each of those is available to you. The deterministic calculations are supporting facts, not a complete strategy. Where they are relevant, weigh the immediate payoff, the future consequences of the action, and what the action reveals to the other party.\n\nYour goal is to win this game and maximize our competition performance.\nFor this decision, choose the legal action that maximizes OUR OWN expected\ngame utility/payoff and chance of a favorable outcome. When monetary payoff\napplies, prioritize our own monetary utility. Consider the current state,\nobserved opponent behavior, remaining horizon, and future consequences.\n\nThe strategic action is primary. Send text only when required by the game or\nwhen it is strategically useful.\n\n## YOUR TASK\nChoose exactly ONE legal action for this turn, and only from the legal\nactions described above.\n\nReturn a single JSON object with these keys:\n- \"action\": an object with \"decision\": exactly one of \"yes\" | \"no\"\n- \"rationale\": one or two sentences of your reasoning (kept internal)\n"
+        }
+      ],
+      "response_schema": {
+        "$defs": {
+          "GleeAction_8914225452": {
+            "properties": {
+              "decision": {
+                "description": "One of the legal choices.",
+                "enum": [
+                  "yes",
+                  "no"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "decision"
+            ],
+            "type": "object"
+          }
+        },
+        "properties": {
+          "action": {
+            "$ref": "#/$defs/GleeAction_8914225452",
+            "description": "The move to submit."
+          },
+          "rationale": {
+            "default": "",
+            "description": "Brief internal reasoning.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "type": "object"
+      },
+      "provider_response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "name": "worker_reply",
+          "strict": true,
+          "schema": {
+            "properties": {
+              "action": {
+                "properties": {
+                  "decision": {
+                    "description": "One of the legal choices.",
+                    "enum": [
+                      "yes",
+                      "no"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "decision"
+                ],
+                "type": "object",
+                "description": "The move to submit.",
+                "additionalProperties": false
+              },
+              "rationale": {
+                "description": "Brief internal reasoning.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "action",
+              "rationale"
+            ],
+            "type": "object",
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "role": "orchestrator",
+      "example_name": "negotiation_counteroffer_history",
+      "game_family": "negotiation",
+      "input_observation": {
+        "game_id": "example-09",
+        "game_family": "negotiation",
+        "your_player": "player_1",
+        "phase": "decision",
+        "opponent": {
+          "type": "hidden",
+          "name": null
+        },
+        "game_state": {
+          "game_family": "negotiation",
+          "round": 2,
+          "horizon_known": false,
+          "phase": "decision",
+          "current_player": "player_1",
+          "player_1_role": "seller",
+          "player_2_role": "buyer",
+          "player_1_value": 10000.0,
+          "complete_information": false,
+          "messages_allowed": false,
+          "last_offer": {
+            "price": 12000.0,
+            "message": "",
+            "from_player": "player_2",
+            "round": 2
+          },
+          "history": [
+            {
+              "round": 1,
+              "offer": {
+                "price": 18000.0,
+                "message": "",
+                "from_player": "player_1",
+                "round": 1
+              },
+              "decision": "RejectOffer",
+              "decided_by": "player_2",
+              "response_time_ms": 959,
+              "counteroffer": 12000.0
+            }
+          ]
+        },
+        "valid_actions": {
+          "type": "decision",
+          "fields": {
+            "decision": "'AcceptOffer', 'RejectOffer', or 'WalkAway'",
+            "product_price": "number (required if RejectOffer - your counteroffer)",
+            "message": "string (optional)"
+          }
+        },
+        "prompt": "You are a seller. Your product is worth at least $10,000.00 to you.\nYou want to sell it for as high a price as possible.\nYou can walk away at any time by choosing 'WalkAway' (you and the buyer both get $0 profit).\nThere is no limit on the number of rounds: the negotiation continues as long as offers keep being rejected.\nIf no agreement is ever reached, both get $0.\n\nRound 2.\n\nPrevious rounds:\n  Round 1: seller offered $18,000.00 → RejectOffer (counter: $12,000.00)\n\nThe buyer offered $12,000.00.\n\nYour options:\n  {\"decision\": \"AcceptOffer\"} - accept the price\n  {\"decision\": \"RejectOffer\", \"product_price\": your_counter} - reject and counter\n  {\"decision\": \"WalkAway\"} - walk away (both get $0)"
+      },
+      "messages": [
+        {
+          "role": "user",
+          "content": "## SITUATION\nGAME ID: example-09\nGAME FAMILY: negotiation\nYOUR ROLE: player_1\nPHASE: decision\nROUND: 2\nOPPONENT: {'type': 'hidden', 'name': None}\n\n## SERVER DESCRIPTION\nYou are a seller. Your product is worth at least $10,000.00 to you.\nYou want to sell it for as high a price as possible.\nYou can walk away at any time by choosing 'WalkAway' (you and the buyer both get $0 profit).\nThere is no limit on the number of rounds: the negotiation continues as long as offers keep being rejected.\nIf no agreement is ever reached, both get $0.\n\nRound 2.\n\nPrevious rounds:\n  Round 1: seller offered $18,000.00 → RejectOffer (counter: $12,000.00)\n\nThe buyer offered $12,000.00.\n\nYour options:\n  {\"decision\": \"AcceptOffer\"} - accept the price\n  {\"decision\": \"RejectOffer\", \"product_price\": your_counter} - reject and counter\n  {\"decision\": \"WalkAway\"} - walk away (both get $0)\n\n## GAME CONFIGURATION\n- complete_information: False\n- horizon_known: False\n- messages_allowed: False\n- player_1_role: seller\n- player_1_value: 10000.0\n- player_2_role: buyer\n\n## CURRENT GAME STATE\n- complete_information: False\n- current_player: player_1\n- game_family: negotiation\n- history: [{'round': 1, 'offer': {'price': 18000.0, 'message': '', 'from_player': 'player_1', 'round': 1}, 'decision': 'RejectOffer', 'decided_by': 'player_2', 'response_time_ms': 959, 'counteroffer': 12000.0}]\n- horizon_known: False\n- last_offer: {'price': 12000.0, 'message': '', 'from_player': 'player_2', 'round': 2}\n- messages_allowed: False\n- phase: decision\n- player_1_role: seller\n- player_1_value: 10000.0\n- player_2_role: buyer\n- round: 2\n\n## PUBLIC HISTORY\n- [round 1] action={'price': 18000.0, 'message': '', 'from_player': 'player_1', 'round': 1}\n\n## DETERMINISTIC CALCULATIONS\nThese values were computed exactly. Treat them as facts.\n- clears_your_reservation_value: True\n- price_on_table: 12000.0\n- rounds_elapsed: 1\n- surplus_over_reservation: 2000.0\n- your_payoff_if_accepted_now: 2000.0\n- your_valuation: 10000.0\n\n## STRATEGIC CHECKLIST\nConsider:\n- your own payoff constraints\n- your uncertainty about the opponent's valuation\n- the information revealed by their offers and messages\n- how much bargaining opportunity remains\n- the risk of no deal versus extracting more surplus\n\n## LEGAL ACTIONS\n- fields: {'decision': \"'AcceptOffer', 'RejectOffer', or 'WalkAway'\", 'product_price': 'number (required if RejectOffer - your counteroffer)', 'message': 'string (optional)'}\n- type: decision\n\nAny free-text message must be at most 2000 characters.\n\n## HOW TO DECIDE\nMake a strategically informed decision. Use the full game state, the public history, the other party's observed behaviour and signals, the deterministic calculations, and the remaining horizon, to the extent each of those is available to you. The deterministic calculations are supporting facts, not a complete strategy. Where they are relevant, weigh the immediate payoff, the future consequences of the action, and what the action reveals to the other party.\n\nYour goal is to win this game and maximize our competition performance.\nFor this decision, choose the legal action that maximizes OUR OWN expected\ngame utility/payoff and chance of a favorable outcome. When monetary payoff\napplies, prioritize our own monetary utility. Consider the current state,\nobserved opponent behavior, remaining horizon, and future consequences.\n\nThe strategic action is primary. Send text only when required by the game or\nwhen it is strategically useful.\n\n## YOUR TASK\n3 assistants will each independently propose a complete action for this\nturn. They will all see exactly the information you just read. They work in\nparallel, cannot talk to each other or to you, and each will return a full\nlegal action. You will then choose the final action yourself.\n\nWrite exactly 3 short analytical questions, derived from THIS state, that are\nworth examining before committing to a move. Each must be answerable from the\ninformation above, be one sentence, and be materially different from the other\ntwo. Two different game states should generally produce different\nquestions.\n\nDo not name roles, do not name models, and do not give any assistant\ninformation the others lack.\n\nReturn a JSON object: {\"tasks\": [\"...\", \"...\", \"...\"]}\n"
+        }
+      ],
+      "response_schema": {
+        "description": "Exactly three short, input-specific analytical questions.",
+        "properties": {
+          "tasks": {
+            "description": "Three one-sentence analytical questions about THIS state.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "tasks"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "role": "worker",
+      "example_name": "negotiation_counteroffer_history",
+      "game_family": "negotiation",
+      "input_observation": {
+        "game_id": "example-09",
+        "game_family": "negotiation",
+        "your_player": "player_1",
+        "phase": "decision",
+        "opponent": {
+          "type": "hidden",
+          "name": null
+        },
+        "game_state": {
+          "game_family": "negotiation",
+          "round": 2,
+          "horizon_known": false,
+          "phase": "decision",
+          "current_player": "player_1",
+          "player_1_role": "seller",
+          "player_2_role": "buyer",
+          "player_1_value": 10000.0,
+          "complete_information": false,
+          "messages_allowed": false,
+          "last_offer": {
+            "price": 12000.0,
+            "message": "",
+            "from_player": "player_2",
+            "round": 2
+          },
+          "history": [
+            {
+              "round": 1,
+              "offer": {
+                "price": 18000.0,
+                "message": "",
+                "from_player": "player_1",
+                "round": 1
+              },
+              "decision": "RejectOffer",
+              "decided_by": "player_2",
+              "response_time_ms": 959,
+              "counteroffer": 12000.0
+            }
+          ]
+        },
+        "valid_actions": {
+          "type": "decision",
+          "fields": {
+            "decision": "'AcceptOffer', 'RejectOffer', or 'WalkAway'",
+            "product_price": "number (required if RejectOffer - your counteroffer)",
+            "message": "string (optional)"
+          }
+        },
+        "prompt": "You are a seller. Your product is worth at least $10,000.00 to you.\nYou want to sell it for as high a price as possible.\nYou can walk away at any time by choosing 'WalkAway' (you and the buyer both get $0 profit).\nThere is no limit on the number of rounds: the negotiation continues as long as offers keep being rejected.\nIf no agreement is ever reached, both get $0.\n\nRound 2.\n\nPrevious rounds:\n  Round 1: seller offered $18,000.00 → RejectOffer (counter: $12,000.00)\n\nThe buyer offered $12,000.00.\n\nYour options:\n  {\"decision\": \"AcceptOffer\"} - accept the price\n  {\"decision\": \"RejectOffer\", \"product_price\": your_counter} - reject and counter\n  {\"decision\": \"WalkAway\"} - walk away (both get $0)"
+      },
+      "messages": [
+        {
+          "role": "user",
+          "content": "## SITUATION\nGAME ID: example-09\nGAME FAMILY: negotiation\nYOUR ROLE: player_1\nPHASE: decision\nROUND: 2\nOPPONENT: {'type': 'hidden', 'name': None}\n\n## SERVER DESCRIPTION\nYou are a seller. Your product is worth at least $10,000.00 to you.\nYou want to sell it for as high a price as possible.\nYou can walk away at any time by choosing 'WalkAway' (you and the buyer both get $0 profit).\nThere is no limit on the number of rounds: the negotiation continues as long as offers keep being rejected.\nIf no agreement is ever reached, both get $0.\n\nRound 2.\n\nPrevious rounds:\n  Round 1: seller offered $18,000.00 → RejectOffer (counter: $12,000.00)\n\nThe buyer offered $12,000.00.\n\nYour options:\n  {\"decision\": \"AcceptOffer\"} - accept the price\n  {\"decision\": \"RejectOffer\", \"product_price\": your_counter} - reject and counter\n  {\"decision\": \"WalkAway\"} - walk away (both get $0)\n\n## GAME CONFIGURATION\n- complete_information: False\n- horizon_known: False\n- messages_allowed: False\n- player_1_role: seller\n- player_1_value: 10000.0\n- player_2_role: buyer\n\n## CURRENT GAME STATE\n- complete_information: False\n- current_player: player_1\n- game_family: negotiation\n- history: [{'round': 1, 'offer': {'price': 18000.0, 'message': '', 'from_player': 'player_1', 'round': 1}, 'decision': 'RejectOffer', 'decided_by': 'player_2', 'response_time_ms': 959, 'counteroffer': 12000.0}]\n- horizon_known: False\n- last_offer: {'price': 12000.0, 'message': '', 'from_player': 'player_2', 'round': 2}\n- messages_allowed: False\n- phase: decision\n- player_1_role: seller\n- player_1_value: 10000.0\n- player_2_role: buyer\n- round: 2\n\n## PUBLIC HISTORY\n- [round 1] action={'price': 18000.0, 'message': '', 'from_player': 'player_1', 'round': 1}\n\n## DETERMINISTIC CALCULATIONS\nThese values were computed exactly. Treat them as facts.\n- clears_your_reservation_value: True\n- price_on_table: 12000.0\n- rounds_elapsed: 1\n- surplus_over_reservation: 2000.0\n- your_payoff_if_accepted_now: 2000.0\n- your_valuation: 10000.0\n\n## STRATEGIC CHECKLIST\nConsider:\n- your own payoff constraints\n- your uncertainty about the opponent's valuation\n- the information revealed by their offers and messages\n- how much bargaining opportunity remains\n- the risk of no deal versus extracting more surplus\n\n## LEGAL ACTIONS\n- fields: {'decision': \"'AcceptOffer', 'RejectOffer', or 'WalkAway'\", 'product_price': 'number (required if RejectOffer - your counteroffer)', 'message': 'string (optional)'}\n- type: decision\n\nAny free-text message must be at most 2000 characters.\n\n## HOW TO DECIDE\nMake a strategically informed decision. Use the full game state, the public history, the other party's observed behaviour and signals, the deterministic calculations, and the remaining horizon, to the extent each of those is available to you. The deterministic calculations are supporting facts, not a complete strategy. Where they are relevant, weigh the immediate payoff, the future consequences of the action, and what the action reveals to the other party.\n\nYour goal is to win this game and maximize our competition performance.\nFor this decision, choose the legal action that maximizes OUR OWN expected\ngame utility/payoff and chance of a favorable outcome. When monetary payoff\napplies, prioritize our own monetary utility. Consider the current state,\nobserved opponent behavior, remaining horizon, and future consequences.\n\nThe strategic action is primary. Send text only when required by the game or\nwhen it is strategically useful.\n\n## YOUR TASK\nYou are one of three assistants advising on this turn. You work alone and\ncannot see the other two.\n\nThe decision-maker wants this perspective examined:\nGiven that the buyer countered with $12,000 after my initial $18,000 offer, what is a reasonable intermediate price point to test their reservation limit without risking a breakdown in negotiations?\n\nUse that perspective to inform your reasoning, then solve the WHOLE decision.\nDo not return a partial analysis, and do not answer only the perspective:\nreturn the single complete legal action you would take this turn.\n\n\nReturn a single JSON object with EXACTLY these two keys:\n- \"candidate_action\": an object with \"product_price\": number - include it ONLY with \"RejectOffer\" (there it is REQUIRED); omit the key entirely otherwise; \"decision\": exactly one of \"AcceptOffer\" | \"RejectOffer\" | \"WalkAway\"\n- \"rationale\": one or two sentences of your reasoning (optional)\nName the action key \"candidate_action\". Do not call it \"action\", and do not nest it inside another object.\n"
+        }
+      ],
+      "response_schema": {
+        "$defs": {
+          "GleeAction_3277665986_AcceptOffer": {
+            "properties": {
+              "decision": {
+                "const": "AcceptOffer",
+                "description": "One of the legal choices.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "decision"
+            ],
+            "type": "object"
+          },
+          "GleeAction_3277665986_RejectOffer": {
+            "properties": {
+              "product_price": {
+                "description": "Numeric value for product_price.",
+                "type": "number"
+              },
+              "decision": {
+                "const": "RejectOffer",
+                "description": "One of the legal choices.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "product_price",
+              "decision"
+            ],
+            "type": "object"
+          },
+          "GleeAction_3277665986_WalkAway": {
+            "properties": {
+              "decision": {
+                "const": "WalkAway",
+                "description": "One of the legal choices.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "decision"
+            ],
+            "type": "object"
+          }
+        },
+        "properties": {
+          "candidate_action": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/GleeAction_3277665986_AcceptOffer"
+              },
+              {
+                "$ref": "#/$defs/GleeAction_3277665986_RejectOffer"
+              },
+              {
+                "$ref": "#/$defs/GleeAction_3277665986_WalkAway"
+              }
+            ],
+            "description": "The complete legal action you would take."
+          },
+          "rationale": {
+            "default": "",
+            "description": "One or two sentences saying why; '' if none.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_action"
+        ],
+        "type": "object"
+      },
+      "assigned_question": "Given that the buyer countered with $12,000 after my initial $18,000 offer, what is a reasonable intermediate price point to test their reservation limit without risking a breakdown in negotiations?"
+    },
+    {
+      "role": "aggregator",
+      "example_name": "negotiation_counteroffer_history",
+      "game_family": "negotiation",
+      "input_observation": {
+        "game_id": "example-09",
+        "game_family": "negotiation",
+        "your_player": "player_1",
+        "phase": "decision",
+        "opponent": {
+          "type": "hidden",
+          "name": null
+        },
+        "game_state": {
+          "game_family": "negotiation",
+          "round": 2,
+          "horizon_known": false,
+          "phase": "decision",
+          "current_player": "player_1",
+          "player_1_role": "seller",
+          "player_2_role": "buyer",
+          "player_1_value": 10000.0,
+          "complete_information": false,
+          "messages_allowed": false,
+          "last_offer": {
+            "price": 12000.0,
+            "message": "",
+            "from_player": "player_2",
+            "round": 2
+          },
+          "history": [
+            {
+              "round": 1,
+              "offer": {
+                "price": 18000.0,
+                "message": "",
+                "from_player": "player_1",
+                "round": 1
+              },
+              "decision": "RejectOffer",
+              "decided_by": "player_2",
+              "response_time_ms": 959,
+              "counteroffer": 12000.0
+            }
+          ]
+        },
+        "valid_actions": {
+          "type": "decision",
+          "fields": {
+            "decision": "'AcceptOffer', 'RejectOffer', or 'WalkAway'",
+            "product_price": "number (required if RejectOffer - your counteroffer)",
+            "message": "string (optional)"
+          }
+        },
+        "prompt": "You are a seller. Your product is worth at least $10,000.00 to you.\nYou want to sell it for as high a price as possible.\nYou can walk away at any time by choosing 'WalkAway' (you and the buyer both get $0 profit).\nThere is no limit on the number of rounds: the negotiation continues as long as offers keep being rejected.\nIf no agreement is ever reached, both get $0.\n\nRound 2.\n\nPrevious rounds:\n  Round 1: seller offered $18,000.00 → RejectOffer (counter: $12,000.00)\n\nThe buyer offered $12,000.00.\n\nYour options:\n  {\"decision\": \"AcceptOffer\"} - accept the price\n  {\"decision\": \"RejectOffer\", \"product_price\": your_counter} - reject and counter\n  {\"decision\": \"WalkAway\"} - walk away (both get $0)"
+      },
+      "messages": [
+        {
+          "role": "user",
+          "content": "## SITUATION\nGAME ID: example-09\nGAME FAMILY: negotiation\nYOUR ROLE: player_1\nPHASE: decision\nROUND: 2\nOPPONENT: {'type': 'hidden', 'name': None}\n\n## SERVER DESCRIPTION\nYou are a seller. Your product is worth at least $10,000.00 to you.\nYou want to sell it for as high a price as possible.\nYou can walk away at any time by choosing 'WalkAway' (you and the buyer both get $0 profit).\nThere is no limit on the number of rounds: the negotiation continues as long as offers keep being rejected.\nIf no agreement is ever reached, both get $0.\n\nRound 2.\n\nPrevious rounds:\n  Round 1: seller offered $18,000.00 → RejectOffer (counter: $12,000.00)\n\nThe buyer offered $12,000.00.\n\nYour options:\n  {\"decision\": \"AcceptOffer\"} - accept the price\n  {\"decision\": \"RejectOffer\", \"product_price\": your_counter} - reject and counter\n  {\"decision\": \"WalkAway\"} - walk away (both get $0)\n\n## GAME CONFIGURATION\n- complete_information: False\n- horizon_known: False\n- messages_allowed: False\n- player_1_role: seller\n- player_1_value: 10000.0\n- player_2_role: buyer\n\n## CURRENT GAME STATE\n- complete_information: False\n- current_player: player_1\n- game_family: negotiation\n- history: [{'round': 1, 'offer': {'price': 18000.0, 'message': '', 'from_player': 'player_1', 'round': 1}, 'decision': 'RejectOffer', 'decided_by': 'player_2', 'response_time_ms': 959, 'counteroffer': 12000.0}]\n- horizon_known: False\n- last_offer: {'price': 12000.0, 'message': '', 'from_player': 'player_2', 'round': 2}\n- messages_allowed: False\n- phase: decision\n- player_1_role: seller\n- player_1_value: 10000.0\n- player_2_role: buyer\n- round: 2\n\n## PUBLIC HISTORY\n- [round 1] action={'price': 18000.0, 'message': '', 'from_player': 'player_1', 'round': 1}\n\n## DETERMINISTIC CALCULATIONS\nThese values were computed exactly. Treat them as facts.\n- clears_your_reservation_value: True\n- price_on_table: 12000.0\n- rounds_elapsed: 1\n- surplus_over_reservation: 2000.0\n- your_payoff_if_accepted_now: 2000.0\n- your_valuation: 10000.0\n\n## STRATEGIC CHECKLIST\nConsider:\n- your own payoff constraints\n- your uncertainty about the opponent's valuation\n- the information revealed by their offers and messages\n- how much bargaining opportunity remains\n- the risk of no deal versus extracting more surplus\n\n## LEGAL ACTIONS\n- fields: {'decision': \"'AcceptOffer', 'RejectOffer', or 'WalkAway'\", 'product_price': 'number (required if RejectOffer - your counteroffer)', 'message': 'string (optional)'}\n- type: decision\n\nAny free-text message must be at most 2000 characters.\n\n## HOW TO DECIDE\nMake a strategically informed decision. Use the full game state, the public history, the other party's observed behaviour and signals, the deterministic calculations, and the remaining horizon, to the extent each of those is available to you. The deterministic calculations are supporting facts, not a complete strategy. Where they are relevant, weigh the immediate payoff, the future consequences of the action, and what the action reveals to the other party.\n\nYour goal is to win this game and maximize our competition performance.\nFor this decision, choose the legal action that maximizes OUR OWN expected\ngame utility/payoff and chance of a favorable outcome. When monetary payoff\napplies, prioritize our own monetary utility. Consider the current state,\nobserved opponent behavior, remaining horizon, and future consequences.\n\nThe strategic action is primary. Send text only when required by the game or\nwhen it is strategically useful.\n\n## YOUR TASK\n## CANDIDATE ACTIONS\n3 of 3 assistants proposed a complete action for this turn. They worked independently from exactly the information you have. The candidates are unlabelled and their order carries no meaning.\n\nCandidate 1: {'decision': 'AcceptOffer'}\nReason given: Accepting the $12,000 offer secures an immediate positive surplus of $2,000 over our $10,000 reservation price, avoiding the risk of a breakdown in negotiations.\n\nCandidate 2: {'decision': 'AcceptOffer'}\nReason given: (none given)\n\nCandidate 3: {'decision': 'WalkAway'}\nReason given: Since my valuation is 10000 and the buyer countered at 12000, rejecting to counter at 15000 is a reasonable intermediate step to test their limit.\n\nDecide this turn yourself. The candidates are input, not a vote.\n\n- Evaluate each candidate against the game state above on its own merits.\n- Agreement between candidates is not evidence. Do not choose an action because\n  more than one assistant proposed it.\n- Check that the action you choose is legal here and consistent with the state,\n  the history, and the remaining horizon.\n- Choose the single action that best advances our own payoff.\n- If none of them is the best available move, construct a different legal\n  action instead.\n\nReturn exactly ONE complete legal action.\n\nReturn a single JSON object with these keys:\n- \"action\": an object with \"product_price\": number - include it ONLY with \"RejectOffer\" (there it is REQUIRED); omit the key entirely otherwise; \"decision\": exactly one of \"AcceptOffer\" | \"RejectOffer\" | \"WalkAway\"\n- \"rationale\": one or two sentences of your reasoning (kept internal)\n"
+        }
+      ],
+      "response_schema": {
+        "$defs": {
+          "GleeAction_3277665986_AcceptOffer": {
+            "properties": {
+              "decision": {
+                "const": "AcceptOffer",
+                "description": "One of the legal choices.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "decision"
+            ],
+            "type": "object"
+          },
+          "GleeAction_3277665986_RejectOffer": {
+            "properties": {
+              "product_price": {
+                "description": "Numeric value for product_price.",
+                "type": "number"
+              },
+              "decision": {
+                "const": "RejectOffer",
+                "description": "One of the legal choices.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "product_price",
+              "decision"
+            ],
+            "type": "object"
+          },
+          "GleeAction_3277665986_WalkAway": {
+            "properties": {
+              "decision": {
+                "const": "WalkAway",
+                "description": "One of the legal choices.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "decision"
+            ],
+            "type": "object"
+          }
+        },
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/GleeAction_3277665986_AcceptOffer"
+              },
+              {
+                "$ref": "#/$defs/GleeAction_3277665986_RejectOffer"
+              },
+              {
+                "$ref": "#/$defs/GleeAction_3277665986_WalkAway"
+              }
+            ],
+            "description": "The move to submit."
+          },
+          "rationale": {
+            "default": "",
+            "description": "Brief internal reasoning.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "type": "object"
+      },
+      "candidates_before_rotation": [
+        {
+          "candidate_action": {
+            "decision": "WalkAway"
+          },
+          "rationale": "Since my valuation is 10000 and the buyer countered at 12000, rejecting to counter at 15000 is a reasonable intermediate step to test their limit."
+        },
+        {
+          "candidate_action": {
+            "decision": "AcceptOffer"
+          },
+          "rationale": "Accepting the $12,000 offer secures an immediate positive surplus of $2,000 over our $10,000 reservation price, avoiding the risk of a breakdown in negotiations."
+        },
+        {
+          "candidate_action": {
+            "decision": "AcceptOffer"
+          },
+          "rationale": null
+        }
+      ],
+      "candidate_order_zero_based": [
+        1,
+        2,
+        0
+      ]
+    }
+  ]
+}

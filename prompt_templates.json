@@ -1,0 +1,976 @@
+{
+  "description": "Finalized ROTOM prompt templates for direct inference, the orchestrator, workers, and aggregator, including shared task and state information.",
+  "scope": "Finalized agents used in live development and final ROTOM evaluation. Earlier preliminary and exploratory offline prompts are outside this package.",
+  "request": {
+    "system_instruction": null,
+    "message_role": "user",
+    "tools": []
+  },
+  "assembly": {
+    "section_separator": "\n\n",
+    "template": "{information_block}\n\n## HOW TO DECIDE\n{shared_decision_instruction}\n\n## YOUR TASK\n{instruction_stripped}\n",
+    "instruction_stripped": "Trim leading and trailing whitespace after filling the selected role instruction; preserve all internal whitespace. Interpolate each template once; do not interpret braces within inserted game text or JSON as new placeholders."
+  },
+  "shared_information": {
+    "sections": [
+      {
+        "name": "situation",
+        "template": "## SITUATION\nGAME ID: {game_id}\nGAME FAMILY: {game_family}{optional_header_lines}",
+        "include_when": "always",
+        "optional_header_lines": [
+          {
+            "template": "\nYOUR ROLE: {role}",
+            "condition": "role is truthy"
+          },
+          {
+            "template": "\nPHASE: {phase}",
+            "condition": "phase is truthy"
+          },
+          {
+            "template": "\nROUND: {round_index}",
+            "condition": "round_index is not null, including zero"
+          },
+          {
+            "template": "\nOPPONENT: {opponent}",
+            "condition": "opponent mapping is nonempty"
+          }
+        ]
+      },
+      {
+        "name": "server_description",
+        "template": "## SERVER DESCRIPTION\n{server_prompt}",
+        "include_when": "server_prompt is truthy"
+      },
+      {
+        "name": "configuration",
+        "template": "## GAME CONFIGURATION\n{render_mapping(game_config)}",
+        "include_when": "game_config is nonempty"
+      },
+      {
+        "name": "state",
+        "template": "## CURRENT GAME STATE\n{render_mapping(game_state)}",
+        "include_when": "always"
+      },
+      {
+        "name": "history",
+        "template": "## PUBLIC HISTORY\n{render_history(transcript)}",
+        "include_when": "always"
+      },
+      {
+        "name": "calculations",
+        "template": "## DETERMINISTIC CALCULATIONS\nThese values were computed exactly. Treat them as facts.\n{render_mapping(tool_outputs)}",
+        "include_when": "tool_outputs is nonempty"
+      },
+      {
+        "name": "checklist",
+        "template": "## STRATEGIC CHECKLIST\n{checklist}",
+        "include_when": "checklist is truthy"
+      },
+      {
+        "name": "legal_actions",
+        "template": "## LEGAL ACTIONS\n{render_mapping(valid_actions)}\n\nAny free-text message must be at most {max_message_len} characters.",
+        "include_when": "always"
+      }
+    ],
+    "rendering": {
+      "mapping": "Empty mapping: (none). Otherwise join with newlines: - {key}: {value}, sorting outer keys. Values use Python str(), preserving nested dictionary insertion order, single quotes, True, False, None, and tuple notation.",
+      "history": "Empty transcript: (no prior rounds). Otherwise join entry lines with newlines. Each entry begins with - and a space, then available fields in order: [round N], speaker:, action={Python dictionary}, message=\"text\", separated by spaces. A raw entry is rendered only if no formatted fields are available.",
+      "identity": "game_family is the lowercased family name. Header role is the original player slot supplied by the server. Functional role for checklist selection uses the state declaration first, otherwise player_1/player_2 map to alice/bob for Bargaining and seller/buyer for Negotiation and Persuasion.",
+      "message_limit": 2000,
+      "configuration": "Copy only exposed configuration fields; never fill missing private information. The current state remains the server-visible state.",
+      "calculations": "Deterministic facts computed from the visible observation before any model call; the same values are supplied to every role. Fully constructed examples retain their calculated values."
+    }
+  },
+  "textual_task_description": {
+    "source": "The literal GLEE game.prompt string, converted to text when non-null.",
+    "insertion": "Under ## SERVER DESCRIPTION, unchanged, in every request for that decision.",
+    "content": "Observed game rules, role, payoff parameters, horizon, current situation and server action instructions.",
+    "scope": "The server description varies with the observation. The following are complete observed descriptions, not universal server generator templates.",
+    "representative_descriptions": [
+      {
+        "name": "bargaining_decision",
+        "game_family": "bargaining",
+        "phase": "decision",
+        "role": "player_2",
+        "text": "You are Bob, negotiating with Alice over how to divide $1,000,000.\nThe game lasts up to 12 rounds.\nEach round, 20.0% inflation erodes your share (its value is multiplied by 0.8 per round).\nWhen responding to an offer you can also leave the bargaining by choosing 'walkaway' — the money is not divided, and you and Alice both get $0.\nIf no agreement is reached after 12 rounds, both players get $0.\n\nRound 1 of 12.\n\nAlice proposed: Alice=$901,000, Bob=$99,000\nRespond with JSON: {\"decision\": \"accept\"}, {\"decision\": \"reject\"}, or {\"decision\": \"walkaway\"} (leave — the money is not divided, both get $0)"
+      },
+      {
+        "name": "bargaining_offer",
+        "game_family": "bargaining",
+        "phase": "offer",
+        "role": "player_1",
+        "text": "You are Alice, negotiating with Bob over how to divide $10,000.\nThere is no limit on the number of rounds: the game continues as long as offers keep being rejected.\nWhen responding to an offer you can also leave the bargaining by choosing 'walkaway' — the money is not divided, and you and Bob both get $0.\nIf you never reach an agreement, both players get $0.\n\nRound 1.\n\nIt's your turn to propose a split.\nRespond with JSON: {\"alice_gain\": amount, \"bob_gain\": amount}\nThe two amounts must sum to 10000."
+      },
+      {
+        "name": "negotiation_decision",
+        "game_family": "negotiation",
+        "phase": "decision",
+        "role": "player_2",
+        "text": "You are a buyer. The product is worth at most $150.00 to you.\nYou want to buy it for as low a price as possible.\nYou can walk away at any time by choosing 'WalkAway' (you and the seller both get $0 profit).\nThis is a single-round negotiation: there is one offer, and no counteroffer is possible.\nIf no agreement after 1 rounds, both get $0.\n\nRound 1 of 1.\n\nThe seller offered $105.50.\n\nYour options:\n  {\"decision\": \"AcceptOffer\"} - accept the price\n  {\"decision\": \"RejectOffer\"} - reject; no counteroffer is possible, so this ends the negotiation (both get $0)\n  {\"decision\": \"WalkAway\"} - walk away (both get $0)"
+      },
+      {
+        "name": "negotiation_offer",
+        "game_family": "negotiation",
+        "phase": "offer",
+        "role": "player_1",
+        "text": "You are a seller. Your product is worth at least $10,000.00 to you.\nYou want to sell it for as high a price as possible.\nYou can walk away at any time by choosing 'WalkAway' (you and the buyer both get $0 profit).\nThere is no limit on the number of rounds: the negotiation continues as long as offers keep being rejected.\nIf no agreement is ever reached, both get $0.\n\nRound 1.\n\nIt's your turn to make a price offer.\nRespond with JSON: {\"product_price\": amount}"
+      },
+      {
+        "name": "persuasion_buyer_decision_binary",
+        "game_family": "persuasion",
+        "phase": "buyer_decision",
+        "role": "player_2",
+        "text": "You are a buyer. Each round a seller offers you a product at $10,000.00.\nThere is a 50% chance each product is high quality (and 50% low quality).\nYou value high-quality products at $40,000.00 and low-quality products at $0.00.\nYou only learn a product's actual quality if you buy it. If you pass, the quality stays hidden.\nYour goal is to maximize your total earnings (value - price for purchases).\n\nThe game lasts 20 rounds.\nRound 1 of 20.\n\nThe seller says: \"no\"\nDo you want to buy? Respond with JSON: {\"decision\": \"yes\"} or {\"decision\": \"no\"}"
+      },
+      {
+        "name": "persuasion_buyer_decision_text",
+        "game_family": "persuasion",
+        "phase": "buyer_decision",
+        "role": "player_2",
+        "text": "You are a buyer. Each round a seller offers you a product at $10,000.00.\nThere is a 33% chance each product is high quality (and 67% low quality).\nYou value high-quality products at $30,000.00 and low-quality products at $0.00.\nYou only learn a product's actual quality if you buy it. If you pass, the quality stays hidden.\nYour goal is to maximize your total earnings (value - price for purchases).\n\nThe game lasts 20 rounds.\nRound 1 of 20.\n\nThe seller says: \"I recommend buying this product.\"\nDo you want to buy? Respond with JSON: {\"decision\": \"yes\"} or {\"decision\": \"no\"}"
+      },
+      {
+        "name": "persuasion_seller_message",
+        "game_family": "persuasion",
+        "phase": "seller_message",
+        "role": "player_1",
+        "text": "You are a seller. Each round you have a product to sell at a fixed price of $100.00.\nThere is a 50% chance each product is high quality (and 50% low quality).\nYou know the actual quality of each product before the buyer decides.\nThe buyer values high-quality products at $120.00 and low-quality products at $0.00.\nYour goal is to maximize your total earnings by selling as many products as possible.\nYou earn $100.00 for each sale.\n\nThe game lasts 20 rounds.\nRound 1 of 20.\n\nThis round's product is **low quality**.\nSend a message to the buyer. Respond with JSON: {\"message\": \"your message\"}"
+      },
+      {
+        "name": "persuasion_seller_recommendation",
+        "game_family": "persuasion",
+        "phase": "seller_message",
+        "role": "player_1",
+        "text": "You are a seller. Each round you have a product to sell at a fixed price of $10,000.00.\nThere is a 50% chance each product is high quality (and 50% low quality).\nYou know the actual quality of each product before the buyer decides.\nYour goal is to maximize your total earnings by selling as many products as possible.\nYou earn $10,000.00 for each sale.\n\nThe game lasts 20 rounds.\nRound 1 of 20.\n\nThis round's product is **high quality**.\nDo you recommend this product? Respond with JSON: {\"decision\": \"yes\"} or {\"decision\": \"no\"}"
+      },
+      {
+        "name": "negotiation_counteroffer_history",
+        "game_family": "negotiation",
+        "phase": "decision",
+        "role": "player_1",
+        "text": "You are a seller. Your product is worth at least $10,000.00 to you.\nYou want to sell it for as high a price as possible.\nYou can walk away at any time by choosing 'WalkAway' (you and the buyer both get $0 profit).\nThere is no limit on the number of rounds: the negotiation continues as long as offers keep being rejected.\nIf no agreement is ever reached, both get $0.\n\nRound 2.\n\nPrevious rounds:\n  Round 1: seller offered $18,000.00 → RejectOffer (counter: $12,000.00)\n\nThe buyer offered $12,000.00.\n\nYour options:\n  {\"decision\": \"AcceptOffer\"} - accept the price\n  {\"decision\": \"RejectOffer\", \"product_price\": your_counter} - reject and counter\n  {\"decision\": \"WalkAway\"} - walk away (both get $0)"
+      }
+    ]
+  },
+  "shared_decision_instruction": "Make a strategically informed decision. Use the full game state, the public history, the other party's observed behaviour and signals, the deterministic calculations, and the remaining horizon, to the extent each of those is available to you. The deterministic calculations are supporting facts, not a complete strategy. Where they are relevant, weigh the immediate payoff, the future consequences of the action, and what the action reveals to the other party.\n\nYour goal is to win this game and maximize our competition performance.\nFor this decision, choose the legal action that maximizes OUR OWN expected\ngame utility/payoff and chance of a favorable outcome. When monetary payoff\napplies, prioritize our own monetary utility. Consider the current state,\nobserved opponent behavior, remaining horizon, and future consequences.\n\nThe strategic action is primary. Send text only when required by the game or\nwhen it is strategically useful.",
+  "checklists": {
+    "bargaining": "Consider:\n- the payoff consequences of delay\n- what you know about the opponent's patience\n- the offer and concession history so far\n- the remaining horizon and the risk of no deal\n- what your next action reveals about you",
+    "negotiation": "Consider:\n- your own payoff constraints\n- your uncertainty about the opponent's valuation\n- the information revealed by their offers and messages\n- how much bargaining opportunity remains\n- the risk of no deal versus extracting more surplus",
+    "persuasion_seller": "Consider:\n- the current product's economics\n- the buyer's beliefs and the trust you have observed\n- the information revealed by your past messages and their outcomes\n- long-term reputation versus an immediate sale\n- the consistency of your signalling across rounds",
+    "persuasion_buyer": "Consider:\n- the prior economics: the stated probability of high quality, the two values,\n  and the price\n- what this round's seller signal does and does not tell you\n- the history of past signals and their outcomes, and what it suggests about\n  how this seller uses signals\n- what you learned about quality from rounds you actually bought in\n- how many rounds remain\n- the trade-off between acting on your current beliefs and learning more about\n  how this seller signals",
+    "persuasion_unresolved_role": "Consider:\n- the prior economics: the stated probability of high quality, the values, and\n  the price\n- what this round's signal does and does not establish\n- what past signals and their outcomes reveal about how signals are being used\n- what the observed history has settled versus what remains uncertain\n- how many rounds remain\n- the consistency of signalling across rounds"
+  },
+  "roles": {
+    "direct": {
+      "instruction_template": "Choose exactly ONE legal action for this turn, and only from the legal\nactions described above.\n\n{final_action_output_format}",
+      "dynamic_inputs": [
+        "final_action_output_format"
+      ]
+    },
+    "orchestrator": {
+      "instruction_template": "3 assistants will each independently propose a complete action for this\nturn. They will all see exactly the information you just read. They work in\nparallel, cannot talk to each other or to you, and each will return a full\nlegal action. You will then choose the final action yourself.\n\nWrite exactly 3 short analytical questions, derived from THIS state, that are\nworth examining before committing to a move. Each must be answerable from the\ninformation above, be one sentence, and be materially different from the other\ntwo. Two different game states should generally produce different\nquestions.\n\nDo not name roles, do not name models, and do not give any assistant\ninformation the others lack.\n\nReturn a JSON object: {\"tasks\": [\"...\", \"...\", \"...\"]}\n",
+      "dynamic_inputs": [],
+      "worker_count": 3
+    },
+    "worker": {
+      "instruction_template": "You are one of three assistants advising on this turn. You work alone and\ncannot see the other two.\n\nThe decision-maker wants this perspective examined:\n{task}\n\nUse that perspective to inform your reasoning, then solve the WHOLE decision.\nDo not return a partial analysis, and do not answer only the perspective:\nreturn the single complete legal action you would take this turn.\n\n\n{worker_action_output_format}",
+      "dynamic_inputs": [
+        "task",
+        "worker_action_output_format"
+      ]
+    },
+    "aggregator": {
+      "instruction_template": "## CANDIDATE ACTIONS\n{candidate_header}\n\n{candidate_blocks}\n\nDecide this turn yourself. The candidates are input, not a vote.\n\n- Evaluate each candidate against the game state above on its own merits.\n- Agreement between candidates is not evidence. Do not choose an action because\n  more than one assistant proposed it.\n- Check that the action you choose is legal here and consistent with the state,\n  the history, and the remaining horizon.\n- Choose the single action that best advances our own payoff.\n- If none of them is the best available move, construct a different legal\n  action instead.\n\nReturn exactly ONE complete legal action.\n\n{final_action_output_format}",
+      "dynamic_inputs": [
+        "candidate_header",
+        "candidate_blocks",
+        "final_action_output_format"
+      ]
+    }
+  },
+  "dynamic_construction": {
+    "worker_tasks": "The orchestrator returns tasks: three nonblank one-sentence questions. Trim outer whitespace, retain order, assign one question to each worker. No fixed personas. Each worker sees the complete shared information and independently proposes a complete action.",
+    "emergency_task_template": "[emergency-decomposition] Independent analysis {i} of 3. Analyse this decision on its own terms and state what action you would take and why.",
+    "emergency_condition": "If delegation fails or does not yield exactly three nonblank questions, use the emergency task for i=1,2,3 without an extra delegation call.",
+    "candidate_header_template": "{n} of 3 assistants proposed a complete action for this turn. They worked independently from exactly the information you have. The candidates are unlabelled and their order carries no meaning.",
+    "candidate_block_template": "Candidate {position}: {action}\nReason given: {rationale}",
+    "candidate_format": "Use Python str(action) for each action dictionary. Strip rationale whitespace, truncate to 600 characters, and replace empty or missing rationale with (none given). Separate blocks by two newlines. Positions start at 1.",
+    "no_candidate_text": "None of the 3 assistants returned a usable action. Decide without them.",
+    "candidate_order": "Retain usable candidates in worker-brief order, then cyclically rotate. Let key be game_id + : + Python str(round_index), hash UTF-8 key with SHA-256, interpret its first eight bytes as an unsigned big-endian integer and take modulo n. Output candidate indices (i + offset) modulo n for i=0..n-1. With n<=1 keep input order.",
+    "candidate_visibility": "The aggregator sees actions and rationales only: no worker identifiers, assigned perspectives, providers or model names.",
+    "output_format": "Derive the action fields, numeric bounds, choices and conditional fields from the legal-action description and documented game contract. Direct and aggregator share the final-action output format; workers use candidate_action. Exact text variants and field templates are provided below."
+  },
+  "output_formats": {
+    "final_action": {
+      "first_line": "Return a single JSON object with these keys:",
+      "action_line": "- \"action\": an object with {action_fields}",
+      "unconstrained_action_line": "- \"action\": an object holding the move, using exactly the field names the legal-action description above calls for",
+      "optional_total_line": "  The values of {numeric_fields_python_list} must sum to exactly {total}.",
+      "optional_message_line": "- \"message\": text to send to the other party, at most {max_message_len} characters; use \"\" to send nothing",
+      "rationale_line": "- \"rationale\": one or two sentences of your reasoning (kept internal)"
+    },
+    "worker": {
+      "first_line": "Return a single JSON object with EXACTLY these two keys:",
+      "action_line": "- \"candidate_action\": an object with {action_fields}",
+      "optional_total_line": "  The values of {numeric_fields_python_list} must sum to exactly {total}.",
+      "rationale_line": "- \"rationale\": one or two sentences of your reasoning (optional)",
+      "last_line": "Name the action key \"candidate_action\". Do not call it \"action\", and do not nest it inside another object."
+    },
+    "field_description_templates": {
+      "unconstrained": "the field names the legal-action description above calls for",
+      "numeric": "\"{name}\": number",
+      "bounded_numeric": "\"{name}\": number in [{low}, {high}]",
+      "conditional_numeric": "\"{name}\": number - include it ONLY with {allowed_choices} (there it is {requirement}); omit the key entirely otherwise",
+      "optional_numeric": "\"{name}\": number, optional - omit the key when it does not apply",
+      "text": "\"{name}\": text (required)",
+      "choice": "\"{name}\": exactly one of {options}"
+    },
+    "rendering_rules": [
+      "Join field descriptions with ; and a space, in order: numeric fields, optional numeric fields, required text fields, discrete choice field.",
+      "Use -inf and +inf for missing lower and upper bounds when either bound is specified.",
+      "Join quoted choice values with space, vertical bar, space. For conditional numeric fields use space, or, space; use REQUIRED if required_for is nonempty, otherwise optional.",
+      "Include the total line only when total is non-null and more than one numeric field exists.",
+      "Include the separate message line only when add-on text is allowed. In seller text mode message is a required action field instead.",
+      "Join output-format lines with one newline."
+    ],
+    "game_contracts": [
+      {
+        "family": "bargaining",
+        "action_type": "offer",
+        "fields": "alice_gain, bob_gain; sum to the advertised total or money_to_divide"
+      },
+      {
+        "family": "bargaining",
+        "action_type": "decision",
+        "fields": "decision: accept | reject | walkaway"
+      },
+      {
+        "family": "negotiation",
+        "action_type": "offer",
+        "fields": "product_price"
+      },
+      {
+        "family": "negotiation",
+        "action_type": "decision",
+        "fields": "decision: AcceptOffer | RejectOffer | WalkAway; product_price only with RejectOffer",
+        "counteroffer_rule": "Counteroffer required unless state establishes the final round. Unknown horizon does not establish the final round."
+      },
+      {
+        "family": "persuasion",
+        "action_type": "seller_message",
+        "fields": "message: required text inside the action"
+      },
+      {
+        "family": "persuasion",
+        "action_type": "seller_recommendation / buyer_decision / decision",
+        "fields": "decision: yes | no"
+      }
+    ],
+    "instantiated_variants": [
+      {
+        "name": "bargaining_decision",
+        "game_family": "bargaining",
+        "phase": "decision",
+        "role": "player_2",
+        "game_state": {
+          "game_family": "bargaining",
+          "round": 1,
+          "max_rounds": 12,
+          "horizon_known": true,
+          "phase": "decision",
+          "current_player": "player_2",
+          "proposer": "player_1",
+          "money_to_divide": 1000000,
+          "delta_2": 0.8,
+          "complete_information": false,
+          "messages_allowed": false,
+          "last_offer": {
+            "player_1_gain": 901000.0,
+            "player_2_gain": 99000.0,
+            "message": "",
+            "proposer": "player_1",
+            "round": 1
+          },
+          "history": []
+        },
+        "valid_actions": {
+          "type": "decision",
+          "fields": {
+            "decision": "'accept', 'reject', or 'walkaway' (leave the bargaining — the money is not divided, both get $0)"
+          }
+        },
+        "final_action_output_format": "Return a single JSON object with these keys:\n- \"action\": an object with \"decision\": exactly one of \"accept\" | \"reject\" | \"walkaway\"\n- \"rationale\": one or two sentences of your reasoning (kept internal)",
+        "worker_action_output_format": "Return a single JSON object with EXACTLY these two keys:\n- \"candidate_action\": an object with \"decision\": exactly one of \"accept\" | \"reject\" | \"walkaway\"\n- \"rationale\": one or two sentences of your reasoning (optional)\nName the action key \"candidate_action\". Do not call it \"action\", and do not nest it inside another object.",
+        "final_action_response_schema": {
+          "$defs": {
+            "GleeAction_6229851793": {
+              "properties": {
+                "decision": {
+                  "description": "One of the legal choices.",
+                  "enum": [
+                    "accept",
+                    "reject",
+                    "walkaway"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "decision"
+              ],
+              "type": "object"
+            }
+          },
+          "properties": {
+            "action": {
+              "$ref": "#/$defs/GleeAction_6229851793",
+              "description": "The move to submit."
+            },
+            "rationale": {
+              "default": "",
+              "description": "Brief internal reasoning.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "name": "bargaining_offer",
+        "game_family": "bargaining",
+        "phase": "offer",
+        "role": "player_1",
+        "game_state": {
+          "game_family": "bargaining",
+          "round": 1,
+          "horizon_known": false,
+          "phase": "offer",
+          "current_player": "player_1",
+          "proposer": "player_1",
+          "money_to_divide": 10000,
+          "delta_1": 1.0,
+          "complete_information": false,
+          "messages_allowed": false,
+          "last_offer": null,
+          "history": []
+        },
+        "valid_actions": {
+          "type": "offer",
+          "fields": {
+            "alice_gain": "number (your proposed amount for Alice)",
+            "bob_gain": "number (your proposed amount for Bob)"
+          }
+        },
+        "final_action_output_format": "Return a single JSON object with these keys:\n- \"action\": an object with \"alice_gain\": number; \"bob_gain\": number\n  The values of ['alice_gain', 'bob_gain'] must sum to exactly 10000.0.\n- \"rationale\": one or two sentences of your reasoning (kept internal)",
+        "worker_action_output_format": "Return a single JSON object with EXACTLY these two keys:\n- \"candidate_action\": an object with \"alice_gain\": number; \"bob_gain\": number\n  The values of ['alice_gain', 'bob_gain'] must sum to exactly 10000.0.\n- \"rationale\": one or two sentences of your reasoning (optional)\nName the action key \"candidate_action\". Do not call it \"action\", and do not nest it inside another object.",
+        "final_action_response_schema": {
+          "$defs": {
+            "GleeAction_8727578145": {
+              "properties": {
+                "alice_gain": {
+                  "description": "Numeric value for alice_gain.",
+                  "type": "number"
+                },
+                "bob_gain": {
+                  "description": "Numeric value for bob_gain.",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "alice_gain",
+                "bob_gain"
+              ],
+              "type": "object"
+            }
+          },
+          "properties": {
+            "action": {
+              "$ref": "#/$defs/GleeAction_8727578145",
+              "description": "The move to submit."
+            },
+            "rationale": {
+              "default": "",
+              "description": "Brief internal reasoning.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "name": "negotiation_decision",
+        "game_family": "negotiation",
+        "phase": "decision",
+        "role": "player_2",
+        "game_state": {
+          "game_family": "negotiation",
+          "round": 1,
+          "max_rounds": 1,
+          "horizon_known": true,
+          "phase": "decision",
+          "current_player": "player_2",
+          "player_1_role": "seller",
+          "player_2_role": "buyer",
+          "player_2_value": 150.0,
+          "complete_information": false,
+          "messages_allowed": false,
+          "last_offer": {
+            "price": 105.5,
+            "message": "",
+            "from_player": "player_1",
+            "round": 1
+          },
+          "history": []
+        },
+        "valid_actions": {
+          "type": "decision",
+          "fields": {
+            "decision": "'AcceptOffer', 'RejectOffer', or 'WalkAway' (no counteroffer possible — rejecting ends the negotiation)",
+            "message": "string (optional)"
+          }
+        },
+        "final_action_output_format": "Return a single JSON object with these keys:\n- \"action\": an object with \"product_price\": number - include it ONLY with \"RejectOffer\" (there it is optional); omit the key entirely otherwise; \"decision\": exactly one of \"AcceptOffer\" | \"RejectOffer\" | \"WalkAway\"\n- \"rationale\": one or two sentences of your reasoning (kept internal)",
+        "worker_action_output_format": "Return a single JSON object with EXACTLY these two keys:\n- \"candidate_action\": an object with \"product_price\": number - include it ONLY with \"RejectOffer\" (there it is optional); omit the key entirely otherwise; \"decision\": exactly one of \"AcceptOffer\" | \"RejectOffer\" | \"WalkAway\"\n- \"rationale\": one or two sentences of your reasoning (optional)\nName the action key \"candidate_action\". Do not call it \"action\", and do not nest it inside another object.",
+        "final_action_response_schema": {
+          "$defs": {
+            "GleeAction_7732988016_AcceptOffer": {
+              "properties": {
+                "decision": {
+                  "const": "AcceptOffer",
+                  "description": "One of the legal choices.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "decision"
+              ],
+              "type": "object"
+            },
+            "GleeAction_7732988016_RejectOffer": {
+              "properties": {
+                "product_price": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null,
+                  "description": "Optional numeric value for product_price; null if not used."
+                },
+                "decision": {
+                  "const": "RejectOffer",
+                  "description": "One of the legal choices.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "decision"
+              ],
+              "type": "object"
+            },
+            "GleeAction_7732988016_WalkAway": {
+              "properties": {
+                "decision": {
+                  "const": "WalkAway",
+                  "description": "One of the legal choices.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "decision"
+              ],
+              "type": "object"
+            }
+          },
+          "properties": {
+            "action": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/GleeAction_7732988016_AcceptOffer"
+                },
+                {
+                  "$ref": "#/$defs/GleeAction_7732988016_RejectOffer"
+                },
+                {
+                  "$ref": "#/$defs/GleeAction_7732988016_WalkAway"
+                }
+              ],
+              "description": "The move to submit."
+            },
+            "rationale": {
+              "default": "",
+              "description": "Brief internal reasoning.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "name": "negotiation_offer",
+        "game_family": "negotiation",
+        "phase": "offer",
+        "role": "player_1",
+        "game_state": {
+          "game_family": "negotiation",
+          "round": 1,
+          "horizon_known": false,
+          "phase": "offer",
+          "current_player": "player_1",
+          "player_1_role": "seller",
+          "player_2_role": "buyer",
+          "player_1_value": 10000.0,
+          "complete_information": false,
+          "messages_allowed": false,
+          "last_offer": null,
+          "history": []
+        },
+        "valid_actions": {
+          "type": "offer",
+          "fields": {
+            "product_price": "number (your proposed price)"
+          }
+        },
+        "final_action_output_format": "Return a single JSON object with these keys:\n- \"action\": an object with \"product_price\": number\n- \"rationale\": one or two sentences of your reasoning (kept internal)",
+        "worker_action_output_format": "Return a single JSON object with EXACTLY these two keys:\n- \"candidate_action\": an object with \"product_price\": number\n- \"rationale\": one or two sentences of your reasoning (optional)\nName the action key \"candidate_action\". Do not call it \"action\", and do not nest it inside another object.",
+        "final_action_response_schema": {
+          "$defs": {
+            "GleeAction_7926475295": {
+              "properties": {
+                "product_price": {
+                  "description": "Numeric value for product_price.",
+                  "type": "number"
+                }
+              },
+              "required": [
+                "product_price"
+              ],
+              "type": "object"
+            }
+          },
+          "properties": {
+            "action": {
+              "$ref": "#/$defs/GleeAction_7926475295",
+              "description": "The move to submit."
+            },
+            "rationale": {
+              "default": "",
+              "description": "Brief internal reasoning.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "name": "persuasion_buyer_decision_binary",
+        "game_family": "persuasion",
+        "phase": "buyer_decision",
+        "role": "player_2",
+        "game_state": {
+          "game_family": "persuasion",
+          "round": 1,
+          "total_rounds": 20,
+          "phase": "buyer_decision",
+          "current_player": "player_2",
+          "player_1_role": "seller",
+          "player_2_role": "buyer",
+          "product_price": 10000,
+          "p": 0.5,
+          "v": 40000.0,
+          "u": 0.0,
+          "is_seller_know_cv": false,
+          "seller_message_type": "binary",
+          "seller_message": "no",
+          "history": [],
+          "seller_total_payoff": 0.0,
+          "buyer_total_payoff": 0.0
+        },
+        "valid_actions": {
+          "type": "buyer_decision",
+          "fields": {
+            "decision": "'yes' (buy) or 'no' (don't buy)"
+          }
+        },
+        "final_action_output_format": "Return a single JSON object with these keys:\n- \"action\": an object with \"decision\": exactly one of \"yes\" | \"no\"\n- \"rationale\": one or two sentences of your reasoning (kept internal)",
+        "worker_action_output_format": "Return a single JSON object with EXACTLY these two keys:\n- \"candidate_action\": an object with \"decision\": exactly one of \"yes\" | \"no\"\n- \"rationale\": one or two sentences of your reasoning (optional)\nName the action key \"candidate_action\". Do not call it \"action\", and do not nest it inside another object.",
+        "final_action_response_schema": {
+          "$defs": {
+            "GleeAction_8914225452": {
+              "properties": {
+                "decision": {
+                  "description": "One of the legal choices.",
+                  "enum": [
+                    "yes",
+                    "no"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "decision"
+              ],
+              "type": "object"
+            }
+          },
+          "properties": {
+            "action": {
+              "$ref": "#/$defs/GleeAction_8914225452",
+              "description": "The move to submit."
+            },
+            "rationale": {
+              "default": "",
+              "description": "Brief internal reasoning.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "name": "persuasion_buyer_decision_text",
+        "game_family": "persuasion",
+        "phase": "buyer_decision",
+        "role": "player_2",
+        "game_state": {
+          "game_family": "persuasion",
+          "round": 1,
+          "total_rounds": 20,
+          "phase": "buyer_decision",
+          "current_player": "player_2",
+          "player_1_role": "seller",
+          "player_2_role": "buyer",
+          "product_price": 10000,
+          "p": 0.3333333333333333,
+          "v": 30000.0,
+          "u": 0.0,
+          "is_seller_know_cv": false,
+          "seller_message_type": "text",
+          "seller_message": "I recommend buying this product.",
+          "history": [],
+          "seller_total_payoff": 0.0,
+          "buyer_total_payoff": 0.0
+        },
+        "valid_actions": {
+          "type": "buyer_decision",
+          "fields": {
+            "decision": "'yes' (buy) or 'no' (don't buy)"
+          }
+        },
+        "final_action_output_format": "Return a single JSON object with these keys:\n- \"action\": an object with \"decision\": exactly one of \"yes\" | \"no\"\n- \"rationale\": one or two sentences of your reasoning (kept internal)",
+        "worker_action_output_format": "Return a single JSON object with EXACTLY these two keys:\n- \"candidate_action\": an object with \"decision\": exactly one of \"yes\" | \"no\"\n- \"rationale\": one or two sentences of your reasoning (optional)\nName the action key \"candidate_action\". Do not call it \"action\", and do not nest it inside another object.",
+        "final_action_response_schema": {
+          "$defs": {
+            "GleeAction_8914225452": {
+              "properties": {
+                "decision": {
+                  "description": "One of the legal choices.",
+                  "enum": [
+                    "yes",
+                    "no"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "decision"
+              ],
+              "type": "object"
+            }
+          },
+          "properties": {
+            "action": {
+              "$ref": "#/$defs/GleeAction_8914225452",
+              "description": "The move to submit."
+            },
+            "rationale": {
+              "default": "",
+              "description": "Brief internal reasoning.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "name": "persuasion_seller_message",
+        "game_family": "persuasion",
+        "phase": "seller_message",
+        "role": "player_1",
+        "game_state": {
+          "game_family": "persuasion",
+          "round": 1,
+          "total_rounds": 20,
+          "phase": "seller_message",
+          "current_player": "player_1",
+          "player_1_role": "seller",
+          "player_2_role": "buyer",
+          "product_price": 100,
+          "p": 0.5,
+          "v": 120.0,
+          "u": 0.0,
+          "is_seller_know_cv": true,
+          "seller_message_type": "text",
+          "current_quality": "low",
+          "seller_message": null,
+          "history": [],
+          "seller_total_payoff": 0.0,
+          "buyer_total_payoff": 0.0
+        },
+        "valid_actions": {
+          "type": "seller_message",
+          "fields": {
+            "message": "string (your message to the buyer)"
+          }
+        },
+        "final_action_output_format": "Return a single JSON object with these keys:\n- \"action\": an object with \"message\": text (required)\n- \"rationale\": one or two sentences of your reasoning (kept internal)",
+        "worker_action_output_format": "Return a single JSON object with EXACTLY these two keys:\n- \"candidate_action\": an object with \"message\": text (required)\n- \"rationale\": one or two sentences of your reasoning (optional)\nName the action key \"candidate_action\". Do not call it \"action\", and do not nest it inside another object.",
+        "final_action_response_schema": {
+          "$defs": {
+            "GleeAction_8355461132": {
+              "properties": {
+                "message": {
+                  "description": "Text for message. This IS the move, not an add-on.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "message"
+              ],
+              "type": "object"
+            }
+          },
+          "properties": {
+            "action": {
+              "$ref": "#/$defs/GleeAction_8355461132",
+              "description": "The move to submit."
+            },
+            "rationale": {
+              "default": "",
+              "description": "Brief internal reasoning.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "name": "persuasion_seller_recommendation",
+        "game_family": "persuasion",
+        "phase": "seller_message",
+        "role": "player_1",
+        "game_state": {
+          "game_family": "persuasion",
+          "round": 1,
+          "total_rounds": 20,
+          "phase": "seller_message",
+          "current_player": "player_1",
+          "player_1_role": "seller",
+          "player_2_role": "buyer",
+          "product_price": 10000,
+          "p": 0.5,
+          "is_seller_know_cv": false,
+          "seller_message_type": "binary",
+          "current_quality": "high",
+          "seller_message": null,
+          "history": [],
+          "seller_total_payoff": 0.0
+        },
+        "valid_actions": {
+          "type": "seller_recommendation",
+          "fields": {
+            "decision": "'yes' (recommend) or 'no' (don't recommend)"
+          }
+        },
+        "final_action_output_format": "Return a single JSON object with these keys:\n- \"action\": an object with \"decision\": exactly one of \"yes\" | \"no\"\n- \"rationale\": one or two sentences of your reasoning (kept internal)",
+        "worker_action_output_format": "Return a single JSON object with EXACTLY these two keys:\n- \"candidate_action\": an object with \"decision\": exactly one of \"yes\" | \"no\"\n- \"rationale\": one or two sentences of your reasoning (optional)\nName the action key \"candidate_action\". Do not call it \"action\", and do not nest it inside another object.",
+        "final_action_response_schema": {
+          "$defs": {
+            "GleeAction_9165276399": {
+              "properties": {
+                "decision": {
+                  "description": "One of the legal choices.",
+                  "enum": [
+                    "yes",
+                    "no"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "decision"
+              ],
+              "type": "object"
+            }
+          },
+          "properties": {
+            "action": {
+              "$ref": "#/$defs/GleeAction_9165276399",
+              "description": "The move to submit."
+            },
+            "rationale": {
+              "default": "",
+              "description": "Brief internal reasoning.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        }
+      },
+      {
+        "name": "negotiation_counteroffer_history",
+        "game_family": "negotiation",
+        "phase": "decision",
+        "role": "player_1",
+        "game_state": {
+          "game_family": "negotiation",
+          "round": 2,
+          "horizon_known": false,
+          "phase": "decision",
+          "current_player": "player_1",
+          "player_1_role": "seller",
+          "player_2_role": "buyer",
+          "player_1_value": 10000.0,
+          "complete_information": false,
+          "messages_allowed": false,
+          "last_offer": {
+            "price": 12000.0,
+            "message": "",
+            "from_player": "player_2",
+            "round": 2
+          },
+          "history": [
+            {
+              "round": 1,
+              "offer": {
+                "price": 18000.0,
+                "message": "",
+                "from_player": "player_1",
+                "round": 1
+              },
+              "decision": "RejectOffer",
+              "decided_by": "player_2",
+              "response_time_ms": 959,
+              "counteroffer": 12000.0
+            }
+          ]
+        },
+        "valid_actions": {
+          "type": "decision",
+          "fields": {
+            "decision": "'AcceptOffer', 'RejectOffer', or 'WalkAway'",
+            "product_price": "number (required if RejectOffer - your counteroffer)",
+            "message": "string (optional)"
+          }
+        },
+        "final_action_output_format": "Return a single JSON object with these keys:\n- \"action\": an object with \"product_price\": number - include it ONLY with \"RejectOffer\" (there it is REQUIRED); omit the key entirely otherwise; \"decision\": exactly one of \"AcceptOffer\" | \"RejectOffer\" | \"WalkAway\"\n- \"rationale\": one or two sentences of your reasoning (kept internal)",
+        "worker_action_output_format": "Return a single JSON object with EXACTLY these two keys:\n- \"candidate_action\": an object with \"product_price\": number - include it ONLY with \"RejectOffer\" (there it is REQUIRED); omit the key entirely otherwise; \"decision\": exactly one of \"AcceptOffer\" | \"RejectOffer\" | \"WalkAway\"\n- \"rationale\": one or two sentences of your reasoning (optional)\nName the action key \"candidate_action\". Do not call it \"action\", and do not nest it inside another object.",
+        "final_action_response_schema": {
+          "$defs": {
+            "GleeAction_3277665986_AcceptOffer": {
+              "properties": {
+                "decision": {
+                  "const": "AcceptOffer",
+                  "description": "One of the legal choices.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "decision"
+              ],
+              "type": "object"
+            },
+            "GleeAction_3277665986_RejectOffer": {
+              "properties": {
+                "product_price": {
+                  "description": "Numeric value for product_price.",
+                  "type": "number"
+                },
+                "decision": {
+                  "const": "RejectOffer",
+                  "description": "One of the legal choices.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "product_price",
+                "decision"
+              ],
+              "type": "object"
+            },
+            "GleeAction_3277665986_WalkAway": {
+              "properties": {
+                "decision": {
+                  "const": "WalkAway",
+                  "description": "One of the legal choices.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "decision"
+              ],
+              "type": "object"
+            }
+          },
+          "properties": {
+            "action": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/GleeAction_3277665986_AcceptOffer"
+                },
+                {
+                  "$ref": "#/$defs/GleeAction_3277665986_RejectOffer"
+                },
+                {
+                  "$ref": "#/$defs/GleeAction_3277665986_WalkAway"
+                }
+              ],
+              "description": "The move to submit."
+            },
+            "rationale": {
+              "default": "",
+              "description": "Brief internal reasoning.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        }
+      }
+    ]
+  },
+  "provider_schema_notes": {
+    "role_schemas": "Example requests include the corresponding response schema. Schema title metadata is omitted for readability; field descriptions and constraints are retained.",
+    "gemini": "JSON response MIME type with a typed response schema when available.",
+    "terra": "Strict JSON Schema response format. All declared properties are required in the provider format; optional defaults and unsupported constraints are removed and references are inlined. The direct example includes that response format."
+  }
+}
