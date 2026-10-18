@@ -42,8 +42,4 @@ The orchestrator generates three state-specific questions. Each worker receives 
 
 Game identifiers and opponent descriptors are sanitized. Questions and candidate actions are frozen recorded intermediate outputs, not fixed instructions. Schema title metadata is omitted; field descriptions and constraints are retained.
 
-Text was checked against the original recorded GLEE observations. Five malformed em-dash sequences in the intermediate export were restored to the original Unicode em dash (U+2014), including punctuation in action descriptions. The files use UTF-8. Historical research records were not modified.
-
-No separate builder script is included. The template file describes dynamic construction, and the examples show the result. For a new request, supply its literal server description, visible context, calculated facts, legal-action constraints, and preceding stage outputs. This folder documents prompts; it does not implement the game adapter, calculators, model clients, or live agent.
-
-The examples were reconstructed offline and checked against the research prompt builders. All 21 prompts constructed from the nine representative observations matched exactly. No live games or provider calls were made. Hosted model outputs and live matchmaking results are not expected to reproduce exactly.
+The template file describes dynamic construction, and the examples show the result. For a new request, supply its literal server description, visible context, calculated facts, legal-action constraints, and preceding stage outputs. This folder documents prompts and does not implement the game adapter, calculators, model clients, or live agent.
